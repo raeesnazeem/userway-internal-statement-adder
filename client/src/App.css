@@ -1,0 +1,332 @@
+/* === Modern CSS Reset & Variables === */
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 3.9%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 3.9%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 3.9%);
+  --primary: hsl(0 0% 9%);
+  --primary-foreground: hsl(0 0% 98%);
+  --secondary: hsl(0 0% 96.1%);
+  --secondary-foreground: hsl(0 0% 9%);
+  --muted: hsl(0 0% 96.1%);
+  --muted-foreground: hsl(0 0% 45.1%);
+  --accent: hsl(0 0% 96.1%);
+  --accent-foreground: hsl(0 0% 9%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(0 0% 89.8%);
+  --input: hsl(0 0% 89.8%);
+  --ring: hsl(0 0% 3.9%);
+  --radius: 0.5rem;
+}
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background-color: hsl(0 0% 98%); /* Lighter gray background */
+  margin: 0;
+  color: var(--foreground);
+}
+
+.App {
+  max-width: 1400px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  color: var(--foreground);
+}
+
+h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--foreground);
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* --- Tabs --- */
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.tab-button {
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* Aligns with parent border */
+  transition: all 0.2s ease-in-out;
+}
+
+.tab-button:hover {
+  color: var(--foreground);
+}
+
+.tab-button.active {
+  color: var(--foreground);
+  border-bottom-color: var(--primary);
+}
+
+/* --- Main Content Card --- */
+.tab-content {
+  background-color: var(--card);
+  padding: 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+/* --- Shared Header & Buttons --- */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap; /* For responsiveness */
+  gap: 16px;
+}
+
+/* General Button Styles (shadcn-inspired) */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--radius) - 2px);
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.button-primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.button-primary:hover:not(:disabled) {
+  background-color: hsl(0 0% 20%);
+}
+
+.button-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+}
+
+.button-secondary:hover:not(:disabled) {
+  background-color: hsl(0 0% 93%);
+}
+
+.button-destructive {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+}
+.button-destructive:hover:not(:disabled) {
+  background-color: hsl(0 75% 50%);
+}
+
+.button:disabled {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Applying button styles to existing classes */
+.scan-all-button {
+  /* This will be the primary button */
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  padding: 10px 15px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.scan-all-button:hover:not(:disabled) {
+  background-color: hsl(0 0% 20%);
+}
+
+.scan-all-button:disabled {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.sort-button {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+  padding: 10px 15px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.sort-button:hover:not(:disabled) {
+  background-color: hsl(0 0% 93%);
+}
+
+/* --- Filters --- */
+.filter-controls-wrapper {
+  flex-grow: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-filter {
+  width: 100%;
+  max-width: 450px;
+  padding: 9px 12px;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--input);
+  background-color: var(--background);
+  font-size: 14px;
+}
+.search-filter:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.category-button {
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 20px; /* Pill shape */
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  transition: all 0.2s ease;
+}
+
+.category-button:hover {
+  background-color: var(--accent);
+  border-color: var(--border);
+}
+
+.category-button.active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+  font-weight: 500;
+}
+
+/* --- Status Colors --- */
+.cancelled-status,
+.deactivated-status {
+  color: var(--destructive);
+  font-weight: 500;
+}
+
+.pro-status {
+  color: hsl(140, 60%, 40%);
+  font-weight: 500;
+}
+
+.basic-status {
+  color: hsl(40, 70%, 50%);
+  font-weight: 500;
+}
+
+.error-status {
+  color: var(--destructive);
+  font-weight: 500;
+}
+
+/* --- Log Container --- */
+.log-container {
+  background-color: #1c1c1c; /* Darker background */
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier,
+    monospace;
+  padding: 1rem;
+  height: 300px;
+  overflow-y: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.log-container-large {
+  height: 500px;
+}
+
+.log-container-empty {
+  color: #888;
+}
+
+/* Description Text */
+.content-description {
+  color: var(--muted-foreground);
+  font-size: 15px;
+  margin: 1rem 0;
+}
+
+/* --- Log Viewer Styles --- */
+.log-viewer {
+  background-color: #282c34;
+  color: #abb2bf;
+  font-family: "Courier New", Courier, monospace;
+  height: 400px;
+  overflow-y: auto;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 20px;
+}
+
+.log-line {
+  margin: 0;
+  padding: 2px 0;
+  white-space: pre-wrap; /* Wrap long lines */
+  word-wrap: break-word;
+}
+
+.log-error {
+  color: #e06c75; /* Red */
+}
+
+.log-success {
+  color: #98c379; /* Green */
+}
+
+.log-warn {
+  color: #e5c07b; /* Yellow */
+}

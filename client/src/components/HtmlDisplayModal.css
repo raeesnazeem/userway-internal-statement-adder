@@ -1,0 +1,58 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000; /* Ensure it's on top */
+}
+
+.modal-content {
+  background-color: var(--card);
+  padding: 30px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh; /* Limit height */
+  overflow-y: auto; /* Allow scrolling if needed */
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Space elements */
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  font-size: 1.5rem;
+}
+
+.modal-content p {
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.modal-content textarea {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.85rem;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  background-color: var(--background);
+  color: var(--foreground);
+  resize: vertical; /* Allow vertical resize */
+  min-height: 200px; /* Ensure decent minimum height */
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end; /* Align buttons to the right */
+  gap: 10px;
+  margin-top: 10px;
+}

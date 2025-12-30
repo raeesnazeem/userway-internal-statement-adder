@@ -1,0 +1,798 @@
+// import React, { useState, useEffect, useRef } from "react"
+// import axios from "axios"
+// import { io } from "socket.io-client"
+// import DataTable, { ScanCell } from "./components/DataTable"
+// import NotificationBell from "./components/Notification"
+// import LoginTester from "./components/LoginTester"
+// import "./App.css"
+
+// // --- Configuration ---
+// const API_BASE_URL = "http://localhost:3001"
+// const SOCKET_URL = "http://localhost:3001"
+
+// // --- Mappings for MASTER ADA sheet---
+// const EXISTING_COL_DATE = 1 // Column B for Existing Customers tab - date
+// const EXISTING_COL_PROJECT = 3 // Column D for Existing Customers tab -  project name
+
+// const NEW_COL_DATE = 0 // Column A for New Customers tab - date
+// const NEW_COL_PROJECT = 3 // Column D for New Customers tab - project name
+
+// // --- Mappings for ADA Duplicate Sheet  ---
+// const URL_COL_PROJECT = 0 // Column A (Project Name)
+// const URL_COL_URL = 1 // Column B (The URL)
+// const URL_COL_DEACTIVATION_DATE = 5 // Column F (Deactivation Date)
+
+// // --- Mappings for ADA Pro Sheet ---
+// const HISTORY_COL_URL = 1 // Column B (URL to match cancellation)
+// const HISTORY_COL_CANCELLED_STATUS = 6 // Column G (Cancellation Status)
+
+// // --- Basecamp Search URL ---
+// const BASECAMP_SEARCH_URL = "https://3.basecamp.com/4023059/search?q="
+
+// // --- Category Filter ---
+// const CATEGORIES = [
+//   "All",
+//   "Do Not Add",
+//   "Annual",
+//   "Blanks",
+//   "Basic",
+//   "Cancelled",
+//   "Deactivated",
+// ]
+
+// // --- Main App Component ---
+// function App() {
+//   const [activeTab, setActiveTab] = useState("master")
+//   const [masterData, setMasterData] = useState([])
+//   const [historyData, setHistoryData] = useState([])
+//   const [scanStatus, setScanStatus] = useState({})
+
+//   // --- State for filters ---
+//   const [searchTerm, setSearchTerm] = useState("")
+//   const [activeCategory, setActiveCategory] = useState("All")
+//   const [historySearchTerm, setHistorySearchTerm] = useState("")
+//   const [historySortOrder, setHistorySortOrder] = useState("asc")
+
+//   const [isScanningAll, setIsScanningAll] = useState(false)
+//   const [notifications, setNotifications] = useState([])
+//   const [unreadCount, setUnreadCount] = useState(0)
+//   const [socket, setSocket] = useState(null)
+
+//   // --- State for Bulk Injector ---
+//   const [bulkInjectLogs, setBulkInjectLogs] = useState([]) //  stores { message, level }
+//   const [isInjecting, setIsInjecting] = useState(false)
+//   const [isVerifying, setIsVerifying] = useState(false) // ---  State for verify job
+//   const [loginTestResults, setLoginTestResults] = useState([])
+//   const logContainerRef = useRef(null)
+
+//   // --- Data Fetching ---
+
+//   const fetchMasterData = async () => {
+//     console.log("Fetching all master data...")
+//     try {
+//       const [existingRes, newRes, urlRes, historyRes] = await Promise.all([
+//         axios.get(`${API_BASE_URL}/api/existing-data`),
+//         axios.get(`${API_BASE_URL}/api/new-data`),
+//         axios.get(`${API_BASE_URL}/api/url-data`),
+//         axios.get(`${API_BASE_URL}/api/history-data`),
+//       ])
+//       const urlMap = new Map()
+//       const deactivationMap = new Map()
+//       const urlData = urlRes.data.slice(1)
+//       for (const row of urlData) {
+//         const projectName = row[URL_COL_PROJECT]
+//         const url = row[URL_COL_URL]
+//         const deactivationDate = row[URL_COL_DEACTIVATION_DATE]
+//         if (projectName) {
+//           const normalizedName = projectName.toLowerCase().trim()
+//           if (url) urlMap.set(normalizedName, url)
+//           if (deactivationDate)
+//             deactivationMap.set(normalizedName, deactivationDate)
+//         }
+//       }
+//       const cancellationMap = new Map()
+//       const historyDataRaw = historyRes.data.slice(1)
+//       for (const row of historyDataRaw) {
+//         const url = row[HISTORY_COL_URL]
+//         const cancelledStatus = row[HISTORY_COL_CANCELLED_STATUS]
+//         if (
+//           url &&
+//           cancelledStatus &&
+//           cancelledStatus.toLowerCase().includes("cancelled client")
+//         ) {
+//           cancellationMap.set(url.toLowerCase().trim(), true)
+//         }
+//       }
+//       const processedExisting = existingRes.data.slice(1).map((row, index) => {
+//         const projectName = row[EXISTING_COL_PROJECT] || ""
+//         const normalizedName = projectName.toLowerCase().trim()
+//         const projectUrl = urlMap.get(normalizedName) || null
+//         const isCancelledMaster = (row[EXISTING_COL_DATE] || "")
+//           .toLowerCase()
+//           .includes("cancelled")
+//         return {
+//           id: `existing-${index}`,
+//           date: row[EXISTING_COL_DATE],
+//           projectName: projectName,
+//           url: projectUrl,
+//           deactivationDate: deactivationMap.get(normalizedName) || null,
+//           isCancelledPro: projectUrl
+//             ? cancellationMap.get(projectUrl.toLowerCase().trim()) || false
+//             : false,
+//           isCancelledMaster: isCancelledMaster,
+//         }
+//       })
+//       const processedNew = newRes.data.slice(1).map((row, index) => {
+//         const projectName = row[NEW_COL_PROJECT] || ""
+//         const normalizedName = projectName.toLowerCase().trim()
+//         const projectUrl = urlMap.get(normalizedName) || null
+//         const isCancelledMaster = (row[NEW_COL_DATE] || "")
+//           .toLowerCase()
+//           .includes("cancelled")
+//         return {
+//           id: `new-${index}`,
+//           date: row[NEW_COL_DATE],
+//           projectName: projectName,
+//           url: projectUrl,
+//           deactivationDate: deactivationMap.get(normalizedName) || null,
+//           isCancelledPro: projectUrl
+//             ? cancellationMap.get(projectUrl.toLowerCase().trim()) || false
+//             : false,
+//           isCancelledMaster: isCancelledMaster,
+//         }
+//       })
+//       setMasterData([...processedExisting, ...processedNew])
+//       console.log("Master data processed!")
+//     } catch (error) {
+//       console.error("Error fetching master data:", error)
+//     }
+//   }
+
+//   const fetchHistoryData = async () => {
+//     try {
+//       const res = await axios.get(`${API_BASE_URL}/api/history-data`)
+//       const rawData = res.data.slice(1) || []
+//       const uniqueEntries = new Map()
+//       for (const row of rawData) {
+//         const url = row[1]
+//         const date = row[5]
+//         if (!url) continue
+//         const existingRow = uniqueEntries.get(url)
+//         if (!existingRow || (!existingRow[5] && date)) {
+//           uniqueEntries.set(url, row)
+//         }
+//       }
+//       setHistoryData(Array.from(uniqueEntries.values()))
+//     } catch (error) {
+//       console.error("Error fetching history data:", error)
+//       setHistoryData([])
+//     }
+//   }
+
+//   // --- Effects ---
+
+//   useEffect(() => {
+//     const newSocket = io(SOCKET_URL)
+//     setSocket(newSocket)
+//     newSocket.on("connect", () => console.log("Socket.io connected"))
+//     newSocket.on("sheet-change", (data) => {
+//       console.log("Sheet change received:", data)
+//       const newNotification = { ...data, id: Date.now() }
+//       setNotifications((prev) => [newNotification, ...prev])
+//       setUnreadCount((prevCount) => prevCount + 1)
+//       fetchMasterData()
+//       fetchHistoryData()
+//     })
+
+//     // --- UPDATED: Socket listener for bulk inject logs ---
+//     newSocket.on("bulk-inject-log", (logData) => {
+//       // Ensure logData is an object
+//       const newLog =
+//         typeof logData === "string"
+//           ? { message: logData, level: "info" }
+//           : logData
+
+//       setBulkInjectLogs((prevLogs) => [newLog, ...prevLogs.slice(0, 200)])
+
+//       // Check for end messages to re-enable button
+//       if (
+//         newLog.message.includes("All done") ||
+//         newLog.message.includes("FATAL ERROR") ||
+//         newLog.message.includes("Process stopped by user") ||
+//         newLog.message.includes("All sites processed")
+//       ) {
+//         setIsInjecting(false)
+//         setIsVerifying(false) // Reset both states
+//       }
+//     })
+
+//     // --- NEW: Socket listener for verify prompt ---
+//     newSocket.on("prompt-for-install", ({ site }) => {
+//       const userConfirmed = window.confirm(
+//         `No UserWay ID found on ${site.url}.\n\nDo you want to log in and inject the Pro script now?`
+//       )
+
+//       if (userConfirmed) {
+//         // Log locally immediately
+//         setBulkInjectLogs((prev) => [
+//           {
+//             message: `User approved install for ${site.url}. Starting addition...`,
+//             level: "info",
+//           },
+//           ...prev,
+//         ])
+//         newSocket.emit("user-confirmed-install", { site })
+//       } else {
+//         // Log locally immediately
+//         setBulkInjectLogs((prev) => [
+//           {
+//             message: `User skipped install for ${site.url}. Moving to next...`,
+//             level: "info",
+//           },
+//           ...prev,
+//         ])
+//         newSocket.emit("user-skipped-verify")
+//       }
+//     })
+
+//     // --- NEW: Socket listener for login test results ---
+//     newSocket.on("login-test-result", (result) => {
+//       // Add to front of results array
+//       setLoginTestResults((prevResults) => [result, ...prevResults])
+//       // Also log it to the main console for good measure
+//       setBulkInjectLogs((prev) => [
+//         {
+//           message: `TEST RESULT: ${result.url} - ${result.message}`,
+//           level: result.status === "success" ? "success" : "error",
+//         },
+//         ...prev,
+//       ])
+//     })
+//     // --- END: NEW LISTENER ---
+
+//     return () => newSocket.close()
+//   }, [])
+
+//   // Auto-scroll log container
+//   useEffect(() => {
+//     if (logContainerRef.current) {
+//       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight
+//     }
+//   }, [bulkInjectLogs])
+
+//   useEffect(() => {
+//     fetchMasterData()
+//     fetchHistoryData()
+//   }, [])
+
+//   // --- Notification ---
+//   const handleBellClick = () => {
+//     setUnreadCount(0)
+//   }
+
+//   // --- Scanning Functions ---
+//   const handleScan = async (url, rowId) => {
+//     if (!url) {
+//       console.warn(`No URL for row ${rowId}, skipping scan.`)
+//       setScanStatus((prev) => ({
+//         ...prev,
+//         [rowId]: { isLoading: false, isPresent: false, status: "No URL" },
+//       }))
+//       return
+//     }
+//     const fullUrl = url.startsWith("http") ? url : `https://${url}`
+//     setScanStatus((prev) => ({
+//       ...prev,
+//       [rowId]: { isLoading: true, isPresent: false, status: "Scanning..." },
+//     }))
+//     try {
+//       const res = await axios.post(`${API_BASE_URL}/api/scan`, {
+//         url: fullUrl,
+//       })
+//       const { isPresent, status } = res.data
+//       setScanStatus((prev) => ({
+//         ...prev,
+//         [rowId]: { isLoading: false, isPresent, status },
+//       }))
+//       if (isPresent && status === "Pro") {
+//         // Only add to history if it's the Pro script
+//         await checkAndUpdateHistory(url)
+//       }
+//     } catch (error) {
+//       console.error("Scan failed:", error)
+//       setScanStatus((prev) => ({
+//         ...prev,
+//         [rowId]: {
+//           isLoading: false,
+//           isPresent: false,
+//           status: "Scan Failed",
+//         },
+//       }))
+//     }
+//   }
+
+//   const handleScanAll = async () => {
+//     setIsScanningAll(true)
+//     const rowsToScan = []
+//     for (const project of masterData) {
+//       const currentStatus = scanStatus[project.id]
+//       if (
+//         project.url &&
+//         (!currentStatus || !currentStatus.isPresent) &&
+//         !project.deactivationDate &&
+//         !project.isCancelledPro &&
+//         !project.isCancelledMaster
+//       ) {
+//         rowsToScan.push(project)
+//       }
+//       if (rowsToScan.length >= 100) break // Limit to 100
+//     }
+//     for (const project of rowsToScan) {
+//       await handleScan(project.url, project.id)
+//     }
+//     setIsScanningAll(false)
+//   }
+
+//   const checkAndUpdateHistory = async (websiteUrl) => {
+//     const alreadyExists = historyData.some((row) => row[1] === websiteUrl)
+//     if (!alreadyExists) {
+//       console.log(`Adding ${websiteUrl} to history...`)
+//       try {
+//         const activatedDate = new Date().toLocaleDateString()
+//         await axios.post(`${API_BASE_URL}/api/add-history`, {
+//           websiteUrl,
+//           activatedDate,
+//         })
+//         fetchHistoryData()
+//       } catch (error) {
+//         console.error("Failed to add to ADA Pro:", error)
+//       }
+//     } else {
+//       console.log(`${websiteUrl} is already in history.`)
+//     }
+//   }
+
+//   // --- Render Functions ---
+
+//   // --- renderMasterTab ---
+//   const renderMasterTab = () => {
+//     const filteredData = masterData
+//       .filter(
+//         (project) => (project.url || "").toLowerCase().trim() !== "website"
+//       )
+//       .filter((project) => {
+//         return (
+//           project.date ||
+//           project.projectName ||
+//           project.url ||
+//           project.deactivationDate ||
+//           project.isCancelledPro ||
+//           project.isCancelledMaster
+//         )
+//       })
+//       .filter((project) => {
+//         const projectDate = (project.date || "").toLowerCase().trim()
+//         const isCancelled = project.isCancelledPro || project.isCancelledMaster
+//         const isDeactivated = !!project.deactivationDate
+
+//         switch (activeCategory) {
+//           case "All":
+//             if (projectDate === "accessiblity add-on pricing updated")
+//               return false
+//             if (projectDate === "due date") return false
+//             if (projectDate === "notification status") return false
+//             if (projectDate.includes("wave")) return false
+//             if (projectDate === "") return false
+//             if (projectDate.includes("do not add")) return false
+//             if (projectDate.includes("annual")) return false
+//             if (projectDate.includes("basic")) return false
+//             return true
+//           case "Do Not Add":
+//             return projectDate.includes("do not add")
+//           case "Annual":
+//             return projectDate.includes("annual")
+//           case "Blanks":
+//             return projectDate === ""
+//           case "Basic":
+//             return projectDate.includes("basic")
+//           case "Cancelled":
+//             return isCancelled
+//           case "Deactivated":
+//             return isDeactivated
+//           default:
+//             return true
+//         }
+//       })
+//       .filter((project) => {
+//         const term = searchTerm.toLowerCase()
+//         if (term === "") return true
+//         const nameMatch = project.projectName.toLowerCase().includes(term)
+//         const urlMatch = project.url && project.url.toLowerCase().includes(term)
+//         return nameMatch || urlMatch
+//       })
+
+//     return (
+//       <>
+//         <div className="dashboard-header">
+//           <h2>Master Project List</h2>
+//           <div className="filter-controls-wrapper">
+//             <input
+//               type="text"
+//               placeholder="Search by name or URL..."
+//               className="search-filter"
+//               value={searchTerm}
+//               onChange={(e) => setSearchTerm(e.target.value)}
+//             />
+//             <div className="category-filters">
+//               {CATEGORIES.map((category) => (
+//                 <button
+//                   key={category}
+//                   className={`category-button ${
+//                     activeCategory === category ? "active" : ""
+//                   }`}
+//                   onClick={() => setActiveCategory(category)}
+//                 >
+//                   {category}
+//                 </button>
+//               ))}
+//             </div>
+//           </div>
+//           <button
+//             className="scan-all-button"
+//             onClick={handleScanAll}
+//             disabled={isScanningAll}
+//           >
+//             {isScanningAll ? "Scanning..." : "Scan All (Max 100)"}
+//           </button>
+//         </div>
+
+//         <DataTable
+//           headers={[
+//             "Date to Activate",
+//             "Project Name",
+//             "Website URL",
+//             "Scan",
+//             "Installation Status",
+//           ]}
+//           rows={filteredData}
+//           renderRow={(project, index) => {
+//             const scanState = scanStatus[project.id] || {}
+//             const isCancelled =
+//               project.isCancelledPro || project.isCancelledMaster
+//             let scanCellStatus = "idle"
+//             let installationStatusText = scanState.status || "---"
+//             let statusClassName = ""
+
+//             if (isCancelled) {
+//               scanCellStatus = "error"
+//               installationStatusText = "Cancelled Client"
+//               statusClassName = "cancelled-status"
+//             } else if (project.deactivationDate) {
+//               scanCellStatus = "error"
+//               installationStatusText = `Deactivated on ${project.deactivationDate}`
+//               statusClassName = "deactivated-status"
+//             } else {
+//               if (scanState.isLoading) scanCellStatus = "loading"
+//               else if (scanState.isPresent) {
+//                 scanCellStatus = "active"
+//                 // Differentiate status text
+//                 installationStatusText =
+//                   scanState.status === "Pro"
+//                     ? "Pro Script Active"
+//                     : "Basic Script Active"
+//                 statusClassName =
+//                   scanState.status === "Pro" ? "pro-status" : "basic-status"
+//               } else if (scanState.status && scanState.status !== "Not Found") {
+//                 scanCellStatus = "error"
+//                 statusClassName = "error-status" // General error status
+//               }
+//             }
+
+//             const encodedProjectName = encodeURIComponent(project.projectName)
+//             const projectLink = `${BASECAMP_SEARCH_URL}${encodedProjectName}`
+
+//             return (
+//               <tr key={project.id}>
+//                 <td>{project.date}</td>
+//                 <td>
+//                   <a
+//                     href={projectLink}
+//                     target="_blank"
+//                     rel="noopener noreferrer"
+//                   >
+//                     {project.projectName}
+//                   </a>
+//                 </td>
+//                 <td>
+//                   {project.url ? (
+//                     <a
+//                       href={
+//                         project.url.startsWith("http")
+//                           ? project.url
+//                           : `https://${project.url}`
+//                       }
+//                       target="_blank"
+//                       rel="noopener noreferrer"
+//                     >
+//                       {project.url}
+//                     </a>
+//                   ) : (
+//                     "---"
+//                   )}
+//                 </td>
+//                 <td>
+//                   <ScanCell
+//                     scanStatus={scanCellStatus}
+//                     onScan={() => handleScan(project.url, project.id)}
+//                   />
+//                 </td>
+//                 <td className={statusClassName}> {installationStatusText} </td>
+//               </tr>
+//             )
+//           }}
+//         />
+//       </>
+//     )
+//   }
+
+//   const renderHistoryTab = () => {
+//     const parseDate = (dateStr) => {
+//       if (!dateStr) return null
+//       const cleanDateStr = dateStr.trim()
+//       const parts = cleanDateStr.split("/")
+//       if (parts.length === 3) {
+//         const month = parseInt(parts[0], 10)
+//         const day = parseInt(parts[1], 10)
+//         const year = parseInt(parts[2], 10)
+//         if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+//           return new Date(year, month - 1, day)
+//         }
+//       }
+//       return null
+//     }
+//     const toggleHistorySort = () => {
+//       setHistorySortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+//     }
+//     const sortedAndFilteredHistory = historyData
+//       .filter((row) => {
+//         const url = row[1] || ""
+//         return url.toLowerCase().includes(historySearchTerm.toLowerCase())
+//       })
+//       .sort((a, b) => {
+//         const dateA = parseDate(a[5])
+//         const dateB = parseDate(b[5])
+//         if (dateA === null && dateB === null) return 0
+//         if (dateA === null) return historySortOrder === "asc" ? 1 : -1
+//         if (dateB === null) return historySortOrder === "asc" ? -1 : 1
+//         if (historySortOrder === "asc") {
+//           return dateA - dateB
+//         } else {
+//           return dateB - dateA
+//         }
+//       })
+//     return (
+//       <>
+//         <div className="dashboard-header">
+//           <h2>Usage & History</h2>
+//           <div className="filter-controls-wrapper">
+//             <input
+//               type="text"
+//               placeholder="Search by URL..."
+//               className="search-filter"
+//               value={historySearchTerm}
+//               onChange={(e) => setHistorySearchTerm(e.target.value)}
+//             />
+//           </div>
+//           <button className="sort-button" onClick={toggleHistorySort}>
+//             {`Sort Date ${
+//               historySortOrder === "asc" ? "Descending" : "Ascending"
+//             }`}
+//           </button>
+//         </div>
+//         <DataTable
+//           headers={["Date Activated", "Website URL"]}
+//           rows={sortedAndFilteredHistory}
+//           renderRow={(row, index) => (
+//             <tr key={row[1] || index}>
+//               <td>{row[5]}</td> <td>{row[1]}</td>
+//             </tr>
+//           )}
+//         />
+//       </>
+//     )
+//   }
+
+//   // --- UPDATED: Render function for the Bulk Injector tab ---
+//   const renderBulkInjectTab = () => {
+//     const isJobRunning = isInjecting || isVerifying
+
+//     const handleStartInject = () => {
+//       if (!socket || isJobRunning) return
+//       if (
+//         !window.confirm(
+//           "Are you sure you want to start the bulk inject process?"
+//         )
+//       ) {
+//         return
+//       }
+//       setBulkInjectLogs([
+//         {
+//           message: "Starting bulk inject... (This may take a long time)",
+//           level: "info",
+//         },
+//       ])
+//       setIsInjecting(true)
+//       socket.emit("start-bulk-inject", {})
+//     }
+
+//     // --- NEW: Verify button handler ---
+//     const handleStartVerify = () => {
+//       if (!socket || isJobRunning) return
+//       if (
+//         !window.confirm(
+//           "Are you sure you want to start the interactive verification process?"
+//         )
+//       ) {
+//         return
+//       }
+//       setBulkInjectLogs([
+//         { message: "Starting interactive verification...", level: "info" },
+//       ])
+//       setIsVerifying(true)
+//       socket.emit("start-interactive-verify", {})
+//     }
+
+//     // --- NEW: Stop button handler ---
+//     const handleStop = () => {
+//       if (!socket) return
+
+//       if (isInjecting) {
+//         console.log("Emitting stop-bulk-inject")
+//         socket.emit("stop-bulk-inject")
+//       }
+//       if (isVerifying) {
+//         console.log("Emitting stop-interactive-verify")
+//         socket.emit("stop-interactive-verify")
+//       }
+//       // Server will send a log message to confirm, which will reset state
+//       // But we can optimistically set it here for UI responsiveness
+//       setIsInjecting(false)
+//       setIsVerifying(false)
+//     }
+
+//     // --- NEW: Helper to get color for log level ---
+//     const getLogStyle = (level) => {
+//       switch (level) {
+//         case "error":
+//           return { color: "#ff8a8a", whiteSpace: "pre-wrap" } // Red
+//         case "success":
+//           return { color: "#8aff8a", whiteSpace: "pre-wrap" } // Green
+//         default:
+//           return { color: "#f0f0f0", whiteSpace: "pre-wrap" } // Default (light gray/white)
+//       }
+//     }
+
+//     return (
+//       <div>
+//         <div className="dashboard-header">
+//           <h2>Installer</h2>
+//           <div
+//             className="button-group"
+//             style={{ display: "flex", gap: "10px" }}
+//           >
+//             {!isJobRunning ? (
+//               <>
+//                 <button onClick={handleStartInject} className="scan-all-button">
+//                   Start Bulk Inject
+//                 </button>
+//                 <button
+//                   onClick={handleStartVerify}
+//                   className="scan-all-button"
+//                   style={{ backgroundColor: "#007bff" }} // Simple style override
+//                 >
+//                   Verify Additions
+//                 </button>
+//               </>
+//             ) : (
+//               <button
+//                 onClick={handleStop}
+//                 className="scan-all-button"
+//                 style={{ backgroundColor: "#dc3545" }} // Stop button style
+//               >
+//                 Stop Process
+//               </button>
+//             )}
+//           </div>
+//         </div>
+//         <p className="description" style={{ margin: "1rem 0" }}>
+//           Read from a Google Sheet and
+//           inject the UserWay script into WordPress sites.
+//           <br />
+//           {/* <strong>Note:</strong> All configuration (Sheet ID, credentials, ADA
+//           script) must be set in the <code>.env</code> file on the server. */}
+//         </p>
+//         <div
+//           className="log-container"
+//           ref={logContainerRef}
+//           style={{
+//             backgroundColor: "#222",
+//             fontFamily: "monospace",
+//             padding: "1rem",
+//             height: "500px",
+//             overflowY: "auto",
+//             borderRadius: "8px",
+//             border: "1px solid #444",
+//             marginTop: "1rem",
+//           }}
+//         >
+//           {/* UPDATED: Render logs with color, in correct order */}
+//           {bulkInjectLogs
+//             .slice()
+//             .reverse()
+//             .map((log, index) => (
+//               <div key={index} style={getLogStyle(log.level)}>
+//                 {log.message}
+//               </div>
+//             ))}
+//         </div>
+//       </div>
+//     )
+//   }
+
+//   return (
+//     <div className="App">
+//       <NotificationBell
+//         notifications={notifications}
+//         unreadCount={unreadCount}
+//         onBellClick={handleBellClick}
+//       />
+//       <h1>ADA Plugin Dashboard</h1>
+//       <nav className="tab-nav">
+//         <button
+//           className={`tab-button ${activeTab === "master" ? "active" : ""}`}
+//           onClick={() => setActiveTab("master")}
+//         >
+//           Master
+//         </button>
+//         <button
+//           className={`tab-button ${activeTab === "history" ? "active" : ""}`}
+//           onClick={() => setActiveTab("history")}
+//         >
+//           Usage & History
+//         </button>
+//         {/* --- Tab Button --- */}
+//         <button
+//           className={`tab-button ${
+//             activeTab === "bulk-inject" ? "active" : ""
+//           }`}
+//           onClick={() => setActiveTab("bulk-inject")}
+//         >
+//           Installer
+//         </button>
+//         <button
+//           className={`tab-button ${
+//             activeTab === "login-tester" ? "active" : ""
+//           }`}
+//           onClick={() => setActiveTab("login-tester")}
+//         >
+//           Login Tester
+//         </button>
+//       </nav>
+//       <main className="tab-content">
+//         {/* --- UPDATED: Tab Content Rendering --- */}
+//         {activeTab === "master" && renderMasterTab()}
+//         {activeTab === "history" && renderHistoryTab()}
+//         {activeTab === "bulk-inject" && renderBulkInjectTab()}
+//         {activeTab === "login-tester" && (
+//           <LoginTester
+//             socket={socket}
+//             results={loginTestResults}
+//             logs={bulkInjectLogs} /* <-- ADD THIS PROP */
+//           />
+//         )}
+//       </main>
+//     </div>
+//   )
+// }
+
+// export default App

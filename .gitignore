@@ -1,0 +1,62 @@
+# Node modules (backend and frontend)
+node_modules/
+client/node_modules/
+server/node_modules/
+
+
+# Build and output directories
+build/
+client/build/
+dist/
+server/dist/
+coverage/
+
+# Environment variable files
+.env
+.env.*
+client/.env
+server/.env
+/server/*.png
+server/results-*.json
+
+#credentials
+src/credentials.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+logs/
+*.log
+server.log*
+
+#summary
+CHANGES_SUMMARY.md
+DEPLOY.md
+SERVER_CLEANUP_GUIDE.md
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Miscellaneous
+*.local
+*.tgz
+.pnp
+.pnp.js
+client/App-backup
+
+# Test coverage
+coverage/
+client/coverage/
+server/coverage/
+server/credentials.json
+client/src/credentials.json
+
