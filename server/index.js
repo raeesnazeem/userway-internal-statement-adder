@@ -12,6 +12,9 @@ const { google } = require("googleapis")
 const axios = require("axios")
 const cheerio = require("cheerio")
 const puppeteer = require("puppeteer")
+require("puppeteer").defaultArgs({
+  args: ["--no-sandbox", "--disable-setuid-sandbox"],
+}) // Global default args if possible? No.
 const sharp = require("sharp")
 
 // --- AUTHENTICATION SETUP ---
@@ -643,10 +646,14 @@ io.on("connection", (socket) => {
         return
       }
 
-      logToClient("Launching persistent browser for session...")
+      const IS_PRODUCTION =
+        process.env.NODE_ENV === "production" || process.env.RENDER
+      logToClient(
+        `Launching persistent browser (Headless: ${IS_PRODUCTION})...`
+      )
       const browser = await puppeteer.launch({
-        headless: false, // Must be non-headless for this interactive task
-        defaultViewport: null, // Allow full viewport
+        headless: IS_PRODUCTION ? true : false,
+        defaultViewport: null,
         args: ["--no-sandbox", "--disable-setuid-sandbox", "--start-maximized"],
       })
 
@@ -675,10 +682,14 @@ io.on("connection", (socket) => {
         return
       }
 
-      logToClient(`Found site at row ${site.rowIndex}. Launching browser...`)
+      const IS_PRODUCTION =
+        process.env.NODE_ENV === "production" || process.env.RENDER
+      logToClient(
+        `Found site at row ${site.rowIndex}. Launching browser (Headless: ${IS_PRODUCTION})...`
+      )
       const browser = await puppeteer.launch({
-        headless: false, // Must be non-headless
-        defaultViewport: null, // Allow full viewport
+        headless: IS_PRODUCTION ? true : false,
+        defaultViewport: null,
         args: ["--no-sandbox", "--disable-setuid-sandbox", "--start-maximized"],
       })
 
